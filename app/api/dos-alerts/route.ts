@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 
+// Helper function to determine severity based on confidence
+const getSeverityFromConfidence = (confidence: number): string => {
+  if (confidence >= 60) return "High";
+  if (confidence >= 40) return "Medium";
+  return "Low";
+};
+
 export async function GET() {
   try {
     // Connect to MongoDB using the connection string
@@ -27,6 +34,7 @@ export async function GET() {
 
     // Transform the data to match the expected interface
     const alerts = alertsFromDb.map((alert) => {
+      const confidence = alert.confidence || 0;
       return {
         _id: alert._id,
         timestamp: alert.timestamp || new Date().toISOString(),
@@ -35,8 +43,8 @@ export async function GET() {
         time_period: alert.time_period || "1min",
         threshold_exceeded: alert.threshold_exceeded || false,
         attack_type: alert.attack_type || "Unknown",
-        confidence: alert.confidence || 0,
-        severity: alert.severity || "Low",
+        confidence,
+        severity: getSeverityFromConfidence(confidence),
         status: alert.status || "Detected",
         blocked: alert.blocked !== undefined ? alert.blocked : false,
         details: alert.details || {},
