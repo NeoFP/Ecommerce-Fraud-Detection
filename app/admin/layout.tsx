@@ -29,6 +29,11 @@ export default function AdminLayout({
       icon: "🛡️",
     },
     {
+      name: "Network Monitor",
+      href: "/admin/network-monitor",
+      icon: "🌐",
+    },
+    {
       name: "Settings",
       href: "/admin/settings",
       icon: "⚙️",
