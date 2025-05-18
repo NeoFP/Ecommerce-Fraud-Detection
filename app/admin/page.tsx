@@ -15,6 +15,34 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { format } from "date-fns";
+
+interface Alert {
+  type: "fraud" | "dos";
+  timestamp: string;
+  details: {
+    transactionId?: string;
+    amount?: number;
+    merchant?: string;
+    confidence: number;
+    status: string;
+    customer?: string;
+    sourceIp?: string;
+    requestCount?: number;
+    severity?: string;
+    attackType?: string;
+  };
+}
+
+interface DashboardData {
+  stats: {
+    totalTransactions: number;
+    fraudulentTransactions: number;
+    dosAttacks: number;
+    averageTransactionAmount: number;
+  };
+  recentAlerts: Alert[];
+}
 
 // Fallback data if API fails
 const fallbackDashboardData = {
@@ -41,63 +69,45 @@ const fallbackDashboardData = {
 };
 
 export default function AdminDashboard() {
-  const [dashboardData, setDashboardData] = useState(fallbackDashboardData);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch dashboard data from API
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setLoading(true);
-
-        // First try our internal API
-        let dashboardResponse;
-        try {
-          dashboardResponse = await fetch("/api/dashboard");
-          if (dashboardResponse.ok) {
-            const data = await dashboardResponse.json();
-            setDashboardData(data);
-            return;
-          }
-        } catch (err) {
-          console.error("Internal API failed, trying external API:", err);
+        const response = await fetch("/api/dashboard");
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard data");
         }
-
-        // If internal API fails, try the external one
-        try {
-          const externalResponse = await fetch(
-            "http://localhost:5001/dashboard"
-          );
-          if (externalResponse.ok) {
-            const data = await externalResponse.json();
-            setDashboardData(data);
-            return;
-          }
-        } catch (err) {
-          console.error("External API failed:", err);
-        }
-
-        // If both APIs fail, use fallback data
-        console.warn("Using fallback dashboard data");
-        setDashboardData(fallbackDashboardData);
+        const data = await response.json();
+        setData(data);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        setError("Failed to load dashboard data. Using fallback data.");
+        setError("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
+    // Refresh data every minute
+    const interval = setInterval(fetchDashboardData, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   // Prepare data for transaction pie chart
   const transactionPieData = [
-    { name: "Fraud", value: dashboardData.fraudTransactions, color: "#ef4444" },
+    {
+      name: "Fraud",
+      value: data?.stats.fraudulentTransactions || 0,
+      color: "#ef4444",
+    },
     {
       name: "Non-Fraud",
-      value: dashboardData.nonFraudTransactions,
+      value:
+        (data?.stats.totalTransactions || 0) -
+        (data?.stats.fraudulentTransactions || 0),
       color: "#22c55e",
     },
   ];
@@ -106,13 +116,15 @@ export default function AdminDashboard() {
   const barChartData = [
     {
       name: "Transactions",
-      Total: dashboardData.totalTransactions,
-      Fraud: dashboardData.fraudTransactions,
-      "Non-Fraud": dashboardData.nonFraudTransactions,
+      Total: data?.stats.totalTransactions || 0,
+      Fraud: data?.stats.fraudulentTransactions || 0,
+      "Non-Fraud":
+        (data?.stats.totalTransactions || 0) -
+        (data?.stats.fraudulentTransactions || 0),
     },
     {
       name: "Attacks",
-      "DoS Attacks": dashboardData.dosAttacks,
+      "DoS Attacks": data?.stats.dosAttacks || 0,
     },
   ];
 
@@ -120,66 +132,68 @@ export default function AdminDashboard() {
     return <div>Loading dashboard data...</div>;
   }
 
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
+  if (!data) {
+    return <div>No dashboard data available</div>;
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
-      {error && (
-        <div className="bg-yellow-50 p-4 rounded-lg text-yellow-800 mb-4">
-          {error}
-        </div>
-      )}
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-gray-500">
               Total Transactions
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardData.totalTransactions}
+              {data.stats.totalTransactions.toLocaleString()}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fraud Transactions
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Fraudulent Transactions
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {dashboardData.fraudTransactions}
+            <div className="text-2xl font-bold text-red-600">
+              {data.stats.fraudulentTransactions.toLocaleString()}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Non-Fraud Transactions
+            <CardTitle className="text-sm font-medium text-gray-500">
+              DoS Attacks
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {dashboardData.nonFraudTransactions}
+            <div className="text-2xl font-bold text-orange-600">
+              {data.stats.dosAttacks.toLocaleString()}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              DoS Attacks Detected
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Average Transaction
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {dashboardData.dosAttacks}
+            <div className="text-2xl font-bold">
+              ${data.stats.averageTransactionAmount.toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -249,69 +263,101 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Alerts */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Alerts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {dashboardData.alerts && dashboardData.alerts.length > 0 ? (
-              dashboardData.alerts.map((alert) => (
-                <div
-                  key={alert._id}
-                  className={`p-4 border rounded-lg ${
-                    alert.type === "fraud"
-                      ? "border-red-200 bg-red-50"
-                      : "border-orange-200 bg-orange-50"
-                  }`}
-                >
-                  <div className="flex justify-between">
-                    <div className="font-medium">
-                      {alert.type === "fraud"
-                        ? "Fraud Alert"
-                        : "DoS Attack Alert"}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(alert.timestamp).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="mt-2 text-sm">
-                    {alert.type === "fraud" ? (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Recent Alerts</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {data.recentAlerts.map((alert, index) => (
+            <Card
+              key={index}
+              className={`border-l-4 ${
+                alert.type === "fraud"
+                  ? "border-l-red-500"
+                  : "border-l-orange-500"
+              }`}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg font-medium">
+                    {alert.type === "fraud" ? "Fraud Alert" : "DoS Alert"}
+                  </CardTitle>
+                  <span
+                    className={`px-2 py-1 text-sm rounded-full ${
+                      alert.type === "fraud"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-orange-100 text-orange-800"
+                    }`}
+                  >
+                    {alert.details.status}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {alert.type === "fraud" ? (
+                    <>
                       <div>
-                        Transaction ID: {alert.details.transactionId} | Amount:
-                        ${alert.details.amount}
+                        <span className="font-medium">Transaction: </span>
+                        {alert.details.transactionId}
                       </div>
-                    ) : (
                       <div>
-                        Source IP: {alert.details.source} | Packets:{" "}
-                        {alert.details.packets}
+                        <span className="font-medium">Customer: </span>
+                        {alert.details.customer}
                       </div>
-                    )}
+                      <div>
+                        <span className="font-medium">Amount: </span>$
+                        {alert.details.amount?.toFixed(2)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Merchant: </span>
+                        {alert.details.merchant}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="font-medium">Source IP: </span>
+                        {alert.details.sourceIp}
+                      </div>
+                      <div>
+                        <span className="font-medium">Attack Type: </span>
+                        {alert.details.attackType}
+                      </div>
+                      <div>
+                        <span className="font-medium">Requests: </span>
+                        {alert.details.requestCount}
+                      </div>
+                      <div>
+                        <span className="font-medium">Severity: </span>
+                        {alert.details.severity}
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <span className="font-medium">Time: </span>
+                    {(() => {
+                      try {
+                        return format(new Date(alert.timestamp), "PPpp");
+                      } catch (error) {
+                        return "Invalid Date";
+                      }
+                    })()}
                   </div>
-                  <div className="mt-2 flex justify-between items-center">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        alert.resolved
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {alert.resolved ? "Resolved" : "Unresolved"}
-                    </span>
-                    <button className="text-sm text-blue-600 hover:underline">
-                      View Details
-                    </button>
+                  <div>
+                    <span className="font-medium">Confidence: </span>
+                    {alert.details.confidence.toFixed(1)}%
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                No recent alerts
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+
+          {data.recentAlerts.length === 0 && (
+            <div className="col-span-2 text-center py-8 text-gray-500">
+              No recent alerts
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
