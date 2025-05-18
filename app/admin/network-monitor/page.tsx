@@ -23,6 +23,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface NetworkPacket {
   id: string;
@@ -53,6 +55,7 @@ export default function NetworkMonitor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trafficStats, setTrafficStats] = useState<any>(null);
+  const [hideInternalRequests, setHideInternalRequests] = useState(true);
 
   useEffect(() => {
     // This effect initializes and manages real-time data updates
@@ -220,6 +223,22 @@ export default function NetworkMonitor() {
     );
   };
 
+  const getFilteredPackets = () => {
+    if (!hideInternalRequests) {
+      return packets;
+    }
+
+    return packets.filter((packet) => {
+      const url = packet.details?.url || "";
+      // Filter out internal API calls and monitoring endpoints
+      return (
+        !url.includes("/api/network-monitor") &&
+        !url.includes("/api/log-request") &&
+        !url.startsWith("/_next/")
+      );
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -383,13 +402,21 @@ export default function NetworkMonitor() {
         {/* HTTP requests tab */}
         <TabsContent value="packets">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle>Recent HTTP Requests</CardTitle>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="hide-internal"
+                  checked={hideInternalRequests}
+                  onCheckedChange={setHideInternalRequests}
+                />
+                <Label htmlFor="hide-internal">Hide Internal Requests</Label>
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px]">
                 <div className="space-y-4">
-                  {packets.map((packet) => (
+                  {getFilteredPackets().map((packet) => (
                     <Card
                       key={packet.id}
                       className={`border-l-4 ${
@@ -435,10 +462,11 @@ export default function NetworkMonitor() {
                     </Card>
                   ))}
 
-                  {packets.length === 0 && (
+                  {getFilteredPackets().length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      No HTTP requests captured yet. Start monitoring to see
-                      network traffic.
+                      {packets.length > 0
+                        ? "All requests are filtered out. Disable the filter to see internal requests."
+                        : "No HTTP requests captured yet. Start monitoring to see network traffic."}
                     </div>
                   )}
                 </div>
