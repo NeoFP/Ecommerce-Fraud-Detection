@@ -21,6 +21,9 @@ export default async function Home() {
           <Link href="/dos-simulator">
             <Button variant="outline">DoS Simulator</Button>
           </Link>
+          <Link href="/admin/login">
+            <Button variant="outline">Admin</Button>
+          </Link>
           <Link href="/auth/login">
             <Button>Login</Button>
           </Link>

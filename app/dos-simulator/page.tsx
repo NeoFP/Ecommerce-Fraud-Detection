@@ -58,6 +58,24 @@ export default function DosSimulatorPage() {
 
       const data = await response.json();
       setSimulationResult(data);
+
+      // If it's detected as an attack, create an alert
+      if (data.label === "Attack") {
+        try {
+          // Create an alert in our database
+          await fetch("/api/dos-alert", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(fullPayload),
+          });
+          console.log("DoS alert created");
+        } catch (alertError) {
+          console.error("Failed to create DoS alert:", alertError);
+          // Don't show this error to the user, as the simulation was successful
+        }
+      }
     } catch (err) {
       console.error("Error during simulation:", err);
       setError(
@@ -136,6 +154,12 @@ export default function DosSimulatorPage() {
                     {simulationResult.label}
                   </span>
                 </div>
+                {simulationResult.label === "Attack" && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm">
+                    <strong>Alert:</strong> A DoS attack was detected and has
+                    been added to the alerts dashboard.
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">
