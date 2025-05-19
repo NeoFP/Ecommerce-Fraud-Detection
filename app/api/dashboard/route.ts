@@ -74,7 +74,9 @@ export async function GET() {
             amount: latestFraud[0].amt || 0,
             merchant: latestFraud[0].merchant || "Unknown",
             confidence: latestFraud[0].confidence || 0,
-            status: latestFraud[0].is_fraud ? "Fraud Detected" : "Legitimate",
+            status: latestFraud[0].is_fraud
+              ? "Fraud Detected"
+              : "Fraud Suspected",
             customer:
               `${latestFraud[0].first || ""} ${
                 latestFraud[0].last || ""
@@ -92,7 +94,7 @@ export async function GET() {
             sourceIp: latestDos[0].source_ip || "Unknown",
             requestCount: latestDos[0].request_count || 0,
             severity: latestDos[0].severity || "Low",
-            status: latestDos[0].blocked ? "Blocked" : "Detected",
+            status: latestDos[0].blocked ? "Blocked" : "Attack Detected",
             attackType: latestDos[0].attack_type || "Unknown",
             confidence: latestDos[0].confidence || 0,
           },
