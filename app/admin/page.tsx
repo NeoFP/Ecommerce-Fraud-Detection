@@ -39,7 +39,6 @@ interface DashboardData {
     totalTransactions: number;
     fraudulentTransactions: number;
     dosAttacks: number;
-    averageTransactionAmount: number;
   };
   recentAlerts: Alert[];
   chartData: {
@@ -115,7 +114,7 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -151,19 +150,6 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
               {data.stats.dosAttacks.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Average Transaction
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${data.stats.averageTransactionAmount.toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -233,6 +219,99 @@ export default function AdminDashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Latest Alerts */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Latest Alerts</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {data.recentAlerts.map((alert, index) => (
+            <Card
+              key={index}
+              className={`border-l-4 ${
+                alert.type === "fraud"
+                  ? "border-l-red-500"
+                  : "border-l-orange-500"
+              }`}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg font-medium">
+                    {alert.type === "fraud"
+                      ? "Latest Fraud Alert"
+                      : "Latest DoS Alert"}
+                  </CardTitle>
+                  <span
+                    className={`px-2 py-1 text-sm rounded-full ${
+                      alert.type === "fraud"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-orange-100 text-orange-800"
+                    }`}
+                  >
+                    {alert.details.status}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {alert.type === "fraud" ? (
+                    <>
+                      <div>
+                        <span className="font-medium">Transaction: </span>
+                        {alert.details.transactionId}
+                      </div>
+                      <div>
+                        <span className="font-medium">Customer: </span>
+                        {alert.details.customer}
+                      </div>
+                      <div>
+                        <span className="font-medium">Amount: </span>$
+                        {alert.details.amount?.toFixed(2)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Merchant: </span>
+                        {alert.details.merchant}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="font-medium">Source IP: </span>
+                        {alert.details.sourceIp}
+                      </div>
+                      <div>
+                        <span className="font-medium">Attack Type: </span>
+                        {alert.details.attackType}
+                      </div>
+                      <div>
+                        <span className="font-medium">Requests: </span>
+                        {alert.details.requestCount}
+                      </div>
+                      <div>
+                        <span className="font-medium">Severity: </span>
+                        {alert.details.severity}
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <span className="font-medium">Time: </span>
+                    {format(new Date(alert.timestamp), "PPpp")}
+                  </div>
+                  <div>
+                    <span className="font-medium">Confidence: </span>
+                    {alert.details.confidence.toFixed(1)}%
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {data.recentAlerts.length === 0 && (
+            <div className="col-span-2 text-center py-8 text-gray-500">
+              No alerts available
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
