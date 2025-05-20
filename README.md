@@ -64,6 +64,7 @@ npm install
 MONGODB_URI=mongodb+srv://admin:admin@ccfraud.hu6gj.mongodb.net/ccfraud
 JWT_SECRET=frauddosdetectionsecretkey
 NEXT_PUBLIC_API_URL=http://localhost:5001
+IPINFO_TOKEN=e3fa46f1168c1b 
 ```
 
 4. Run the development server:
