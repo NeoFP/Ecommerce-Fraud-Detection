@@ -91,7 +91,8 @@ export default function FraudAlerts() {
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg font-medium">
-                  Transaction {alert.trans_num.slice(-8)}
+                  Transaction{" "}
+                  {alert.trans_num ? alert.trans_num.slice(-8) : "Unknown"}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <span
@@ -118,7 +119,10 @@ export default function FraudAlerts() {
                   </div>
                   <div>
                     <span className="font-medium">Card: </span>
-                    ****{alert.cc_num.$numberLong.slice(-4)}
+                    ****
+                    {alert.cc_num && alert.cc_num.$numberLong
+                      ? alert.cc_num.$numberLong.slice(-4)
+                      : "****"}
                   </div>
                   <div>
                     <span className="font-medium">Amount: </span>$
